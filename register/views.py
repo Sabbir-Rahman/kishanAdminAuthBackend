@@ -33,7 +33,7 @@ def register(request):
     password = request.POST['password']
 
     if(re.match(regex,input)):
-        
+
         email = input
         user_obj = User.objects.create(email=email,password=make_password(password))
 
@@ -72,10 +72,10 @@ def register(request):
         else:
             otp_create = OTP.objects.create(phone_or_email=input,otp_code=otp_code)
 
-        response_sms = send_sms_twilio(phone_no,otp_code)
+        # response_sms = send_sms_twilio(phone_no,otp_code)
        
         res = {
-            'response_sms' : response_sms,
+            'response_sms_otp' : otp_code,
             'message': 'Sms send to '+ str(phone_no)
         }
         return Response(res, status=200)
@@ -125,10 +125,10 @@ def verify_phone_otp(request):
     phone_no = request.POST['phone_no']
     otp = request.POST['otp']
 
-    otp_obj = OTP.objects.filter(input=phone_no)
+    otp_obj = OTP.objects.filter(phone_or_email=phone_no)
 
     if otp_obj.exists():
-        otp_obj = OTP.objects.get(input=phone_no)
+        otp_obj = OTP.objects.get(phone_or_email=phone_no)
         ''
         if(otp_obj.otp_code==otp):
             user = User.objects.get(phone = phone_no)
