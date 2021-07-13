@@ -1,3 +1,4 @@
+import datetime
 from django.shortcuts import render
 from users.models import OTP, User
 
@@ -19,6 +20,7 @@ from .serializers import userSerializer
 import re
 from .sms_wrappers import send_sms_twilio
 from .utils import generate_referral_code
+from datetime import date,timezone
 
 
 # http://127.0.0.1:8000/sms/send/
@@ -136,6 +138,10 @@ def verify_phone_otp(request):
 
     if otp_obj.exists():
         otp_obj = OTP.objects.get(phone_or_email=phone_no)
+        
+        delta =datetime.datetime.now(timezone.utc)-otp_obj.timestamp
+        if((delta.seconds//60)%60 >15):
+           return Response({'message':'OTP time expired sent again'}, status=status.HTTP_400_BAD_REQUEST) 
         ''
         if(otp_obj.otp_code==otp):
             user = User.objects.get(phone = phone_no)
@@ -218,6 +224,9 @@ def forget_password(request):
             otp_code = generate_referral_code()
             otp_obj = OTP.objects.filter(phone_or_email=email)
             if otp_obj.exists():
+                delta =datetime.datetime.now(timezone.utc)-otp_obj.timestamp
+                if((delta.seconds//60)%60 >15):
+                    return Response({'message':'OTP time expired sent again'}, status=status.HTTP_400_BAD_REQUEST) 
                 otp_obj = OTP.objects.get(phone_or_email=email)
                 otp_obj.otp_code=otp_code
                 otp_obj.save()
@@ -245,6 +254,10 @@ def forget_password(request):
             otp_code = generate_referral_code()
             otp_obj = OTP.objects.filter(phone_or_email=phone_no)
             if otp_obj.exists():
+
+                delta =datetime.datetime.now(timezone.utc)-otp_obj.timestamp
+                if((delta.seconds//60)%60 >15):
+                    return Response({'message':'OTP time expired sent again'}, status=status.HTTP_400_BAD_REQUEST) 
                 otp_obj = OTP.objects.get(phone_or_email=phone_no)
                 otp_obj.otp_code=otp_code
                 otp_obj.save()
