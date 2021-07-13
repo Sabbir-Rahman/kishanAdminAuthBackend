@@ -13,7 +13,7 @@ def send_sms_twilio(phone_no,otp_code):
 
     message = client.messages \
                     .create(
-                        body="কিষাণে রেজিস্ট্রার করার জন্য আপনাকে ধন্যবাদ। আপনার OTP "+str(otp_code),
+                        body="কিষাণের সাথে থাকার জন্য আপনাকে ধন্যবাদ আপনার OTP "+str(otp_code),
                         from_='+18183517330',
                         to= phone_no
                     )

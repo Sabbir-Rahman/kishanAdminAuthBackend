@@ -4,7 +4,9 @@ from .views import (
     register,
     verify_email,
     view_user,
-    verify_phone_otp
+    verify_phone_otp,
+    forget_password,
+    reset_password
 )
 
 
@@ -13,6 +15,8 @@ urlpatterns = [
     path('verify/', verify_email, name="email-verify"),
     path('view/', view_user),
     path('verifyphoneotp/', verify_phone_otp),
-    path('login/', login)
+    path('login/', login),
+    path('forget/', forget_password),
+    path('reset/', reset_password),
     
 ]

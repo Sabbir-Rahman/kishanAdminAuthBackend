@@ -33,8 +33,11 @@ def register(request):
     password = request.POST['password']
 
     if(re.match(regex,input)):
-        
+
         email = input
+        user_obj = User.objects.filter(email=email)
+        if user_obj.exists():
+            return Response({'email':'User already exist'}, status=status.HTTP_400_BAD_REQUEST)
         user_obj = User.objects.create(email=email,password=make_password(password))
 
         #sending token for email verification
@@ -59,6 +62,10 @@ def register(request):
         return Response(res, status=200)
     else:
         phone_no = input
+        user_obj = User.objects.filter(phone=phone_no)
+        if user_obj.exists():
+            return Response({'email':'User already exist'}, status=status.HTTP_400_BAD_REQUEST)
+        
 
         otp_code = generate_referral_code()
         user_obj = User.objects.create(phone=phone_no,password=make_password(password))
@@ -72,10 +79,10 @@ def register(request):
         else:
             otp_create = OTP.objects.create(phone_or_email=input,otp_code=otp_code)
 
-        response_sms = send_sms_twilio(phone_no,otp_code)
+        # response_sms = send_sms_twilio(phone_no,otp_code)
        
         res = {
-            'response_sms' : response_sms,
+            'response_sms_otp' : otp_code,
             'message': 'Sms send to '+ str(phone_no)
         }
         return Response(res, status=200)
@@ -125,10 +132,10 @@ def verify_phone_otp(request):
     phone_no = request.POST['phone_no']
     otp = request.POST['otp']
 
-    otp_obj = OTP.objects.filter(input=phone_no)
+    otp_obj = OTP.objects.filter(phone_or_email=phone_no)
 
     if otp_obj.exists():
-        otp_obj = OTP.objects.get(input=phone_no)
+        otp_obj = OTP.objects.get(phone_or_email=phone_no)
         ''
         if(otp_obj.otp_code==otp):
             user = User.objects.get(phone = phone_no)
@@ -161,9 +168,12 @@ def login(request):
         user_obj = User.objects.filter(email=email)
         if user_obj.exists():
             user_obj = User.objects.get(email=email)
+            if (user_obj.verified==False):
+                return Response({'message':'Please verify account first'})
 
-            if(user_obj.password==check_password(password)):
-              return Response({'message':'Welcome'+str(email)}, status=status.HTTP_200_OK)
+            if(check_password(password,user_obj.password)):
+              token = RefreshToken.for_user(user=user_obj).access_token
+              return Response({'message':'Welcome '+str(email),'token':str(token)}, status=status.HTTP_200_OK)
             else:
               return Response({'message':'Password not matched'}, status=status.HTTP_400_BAD_REQUEST)
         else:
@@ -176,10 +186,153 @@ def login(request):
 
         if user_obj.exists():
             user_obj = User.objects.get(phone=phone_no)
+            if (user_obj.verified==False):
+                return Response({'message':'Please verify account first'})
 
-            if(user_obj.password==check_password(password)):
-              return Response({'message':'Welcome'+str(phone_no)}, status=status.HTTP_200_OK)
+            if(check_password(password,user_obj.password)):
+              token = RefreshToken.for_user(user=user_obj).access_token
+              return Response({'message':'Welcome '+str(phone_no),'token':str(token)}, status=status.HTTP_200_OK)
             else:
               return Response({'message':'Password not matched'}, status=status.HTTP_400_BAD_REQUEST)
         else:
             return Response({'message':'User not found'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+# http://127.0.0.1:8000/sms/send/
+@api_view(['POST'])
+def forget_password(request):
+    
+    # Make a regular expression
+    # for validating an Email
+    regex = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
+
+    input = request.POST['input']
+   
+
+    if(re.match(regex,input)):
+
+        email = input
+        user_obj = User.objects.filter(email=email)
+        if user_obj.exists():
+            user_obj = User.objects.get(email=email)
+            otp_code = generate_referral_code()
+            otp_obj = OTP.objects.filter(phone_or_email=email)
+            if otp_obj.exists():
+                otp_obj = OTP.objects.get(phone_or_email=email)
+                otp_obj.otp_code=otp_code
+                otp_obj.save()
+
+            else:
+                otp_create = OTP.objects.create(phone_or_email=input,otp_code=otp_code)
+            email_body = 'স্বাগতম\n'+ 'কিষাণের সাথে থাকার জন্য আপনাকে ধন্যবাদ আপনার OTP \n \n'+otp_code+'\n\n ধন্যবাদান্তে\n-টিম কিষাণ'
+            data ={'to_email':email,'email_body':email_body,'email_subject': 'Forget pass otp'}
+
+            Util.send_email(data)
+                
+
+        else:
+            return Response({'email':'User not exist exist'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        res = {
+            'message': 'Forget password otp send to '+ str(email),
+        }
+        return Response(res, status=200)
+    else:
+        phone_no = input
+        user_obj = User.objects.filter(phone=phone_no)
+        if user_obj.exists():
+            user_obj = User.objects.get(phone=phone_no)
+            otp_code = generate_referral_code()
+            otp_obj = OTP.objects.filter(phone_or_email=phone_no)
+            if otp_obj.exists():
+                otp_obj = OTP.objects.get(phone_or_email=phone_no)
+                otp_obj.otp_code=otp_code
+                otp_obj.save()
+
+            else:
+                otp_create = OTP.objects.create(phone_or_email=input,otp_code=otp_code)
+        else:        
+            return Response({'email':'User not exist'}, status=status.HTTP_400_BAD_REQUEST)
+        
+
+        # response_sms = send_sms_twilio(phone_no,otp_code)
+       
+        res = {
+            'response_sms_otp' : otp_code,
+            'message': 'Forget pass otp send to '+ str(phone_no)
+        }
+        return Response(res, status=200)
+
+@api_view(['POST'])
+def reset_password(request):
+    
+    # Make a regular expression
+    # for validating an Email
+    regex = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
+
+    input = request.POST['input']
+    otp = request.POST['otp']
+    new_password = request.POST['new_password']
+
+    if(re.match(regex,input)):
+
+        email = input
+        user_obj = User.objects.filter(email=email)
+        if user_obj.exists():
+            user_obj = User.objects.get(email=email)
+            if (user_obj.verified==False):
+                return Response({'message':'Please verify account first'})
+            otp_obj = OTP.objects.filter(phone_or_email=email)
+
+            if otp_obj.exists():
+                otp_obj = OTP.objects.get(phone_or_email=email)
+                ''
+                if(otp_obj.otp_code==otp):
+                    user = User.objects.get(email = email)
+                   
+                    user.password = make_password(new_password)
+                    user.save()
+                    return Response({'message':'Account Password reset'}, status=status.HTTP_200_OK)
+
+                else:
+                    return Response({'message':'Wrong otp please enter correct one'}, status=status.HTTP_400_BAD_REQUEST)
+
+            else:
+                return Response({'message':'You have no otp with this number'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+            
+        else:
+            return Response({'message':'User not found'}, status=status.HTTP_400_BAD_REQUEST)
+
+        
+    else:
+        email = input
+        user_obj = User.objects.filter(email=email)
+        if user_obj.exists():
+            user_obj = User.objects.get(email=email)
+            if (user_obj.verified==False):
+                return Response({'message':'Please verify account first'})
+            otp_obj = OTP.objects.filter(phone_or_email=email)
+
+            if otp_obj.exists():
+                otp_obj = OTP.objects.get(phone_or_email=email)
+                ''
+                if(otp_obj.otp_code==otp):
+                    user = User.objects.get(phone = email)
+                    
+                    user.password = make_password(new_password)
+                    user.save()
+                    return Response({'message':'Account Password reset'}, status=status.HTTP_200_OK)
+
+                else:
+                    return Response({'message':'Wrong otp please enter correct one'}, status=status.HTTP_400_BAD_REQUEST)
+
+            else:
+                return Response({'message':'You have no otp with this number'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+            
+        else:
+            return Response({'message':'User not found'}, status=status.HTTP_400_BAD_REQUEST)
+
