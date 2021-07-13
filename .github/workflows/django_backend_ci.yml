@@ -28,7 +28,6 @@ jobs:
         python-version: 3.8
     - name: psycopg2 prerequisites
       run: sudo apt-get install python-dev libpq-dev
-    - name: Install dependencies
     - name: Run migrations
       run: |
           python manage.py makemigrations
