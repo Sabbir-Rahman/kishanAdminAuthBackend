@@ -22,3 +22,4 @@ class Profile(models.Model):
 class OTP(models.Model):
     phone_or_email = models.CharField(max_length=64)
     otp_code = models.CharField(max_length=10)
+    timestamp = models.DateTimeField(auto_now=True)
