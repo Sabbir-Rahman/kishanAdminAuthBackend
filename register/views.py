@@ -35,6 +35,9 @@ def register(request):
     if(re.match(regex,input)):
 
         email = input
+        user_obj = User.objects.filter(email=email)
+        if user_obj.exists():
+            return Response({'email':'User already exist'}, status=status.HTTP_400_BAD_REQUEST)
         user_obj = User.objects.create(email=email,password=make_password(password))
 
         #sending token for email verification
@@ -59,6 +62,10 @@ def register(request):
         return Response(res, status=200)
     else:
         phone_no = input
+        user_obj = User.objects.filter(phone=phone_no)
+        if user_obj.exists():
+            return Response({'email':'User already exist'}, status=status.HTTP_400_BAD_REQUEST)
+        
 
         otp_code = generate_referral_code()
         user_obj = User.objects.create(phone=phone_no,password=make_password(password))
@@ -161,9 +168,12 @@ def login(request):
         user_obj = User.objects.filter(email=email)
         if user_obj.exists():
             user_obj = User.objects.get(email=email)
+            if (user_obj.verified==False):
+                return Response({'message':'Please verify account first'})
 
             if(user_obj.password==check_password(password)):
-              return Response({'message':'Welcome'+str(email)}, status=status.HTTP_200_OK)
+              token = RefreshToken.for_user(user=user_obj).access_token
+              return Response({'message':'Welcome '+str(email),'token':str(token)}, status=status.HTTP_200_OK)
             else:
               return Response({'message':'Password not matched'}, status=status.HTTP_400_BAD_REQUEST)
         else:
@@ -176,9 +186,12 @@ def login(request):
 
         if user_obj.exists():
             user_obj = User.objects.get(phone=phone_no)
+            if (user_obj.verified==False):
+                return Response({'message':'Please verify account first'})
 
-            if(user_obj.password==check_password(password)):
-              return Response({'message':'Welcome'+str(phone_no)}, status=status.HTTP_200_OK)
+            if(check_password(password,user_obj.password)):
+              token = RefreshToken.for_user(user=user_obj).access_token
+              return Response({'message':'Welcome '+str(phone_no),'token':str(token)}, status=status.HTTP_200_OK)
             else:
               return Response({'message':'Password not matched'}, status=status.HTTP_400_BAD_REQUEST)
         else:
