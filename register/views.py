@@ -33,6 +33,7 @@ def register(request):
     password = request.POST['password']
 
     if(re.match(regex,input)):
+        
         email = input
         user_obj = User.objects.create(email=email,password=make_password(password))
 
